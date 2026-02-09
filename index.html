@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cosmos Video Player</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0a1628 0%, #1a0f3d 50%, #0a1628 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Animated stars background */
+        .stars {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .star {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background: white;
+            border-radius: 50%;
+            animation: twinkle 3s infinite;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+
+        .container {
+            max-width: 1200px;
+            width: 100%;
+            background: rgba(15, 15, 40, 0.8);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(100, 150, 255, 0.3),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(100, 150, 255, 0.3);
+            position: relative;
+            z-index: 1;
+        }
+
+        h1 {
+            text-align: center;
+            color: #fff;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 0 0 20px rgba(100, 150, 255, 0.8),
+                         0 0 40px rgba(100, 150, 255, 0.4);
+            background: linear-gradient(90deg, #60a5fa, #a78bfa, #60a5fa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .search-container {
+            margin-bottom: 30px;
+            position: relative;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 15px 20px;
+            background: rgba(30, 30, 60, 0.6);
+            border: 2px solid rgba(100, 150, 255, 0.4);
+            border-radius: 12px;
+            color: #fff;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #60a5fa;
+            box-shadow: 0 0 20px rgba(96, 165, 250, 0.4);
+            background: rgba(30, 30, 60, 0.8);
+        }
+
+        input[type="text"]::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        button {
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #60a5fa, #a78bfa);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(96, 165, 250, 0.4);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(96, 165, 250, 0.6);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .api-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .api-button {
+            flex: 1;
+            padding: 10px;
+            background: rgba(30, 30, 60, 0.6);
+            border: 2px solid rgba(100, 150, 255, 0.4);
+            border-radius: 8px;
+            color: rgba(255, 255, 255, 0.7);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .api-button.active {
+            background: linear-gradient(135deg, #60a5fa, #a78bfa);
+            border-color: transparent;
+            color: white;
+            box-shadow: 0 4px 15px rgba(96, 165, 250, 0.4);
+        }
+
+        .video-player {
+            width: 100%;
+            aspect-ratio: 16/9;
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 15px;
+            margin-bottom: 20px;
+            overflow: hidden;
+            border: 2px solid rgba(100, 150, 255, 0.3);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        }
+
+        .video-player iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .placeholder svg {
+            width: 80px;
+            height: 80px;
+            opacity: 0.3;
+        }
+
+        .placeholder-text {
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 18px;
+        }
+
+        .results-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .video-card {
+            background: rgba(30, 30, 60, 0.6);
+            border-radius: 12px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid rgba(100, 150, 255, 0.2);
+        }
+
+        .video-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(100, 150, 255, 0.6);
+            box-shadow: 0 8px 25px rgba(96, 165, 250, 0.4);
+        }
+
+        .video-thumbnail {
+            width: 100%;
+            aspect-ratio: 16/9;
+            object-fit: cover;
+            background: rgba(0, 0, 0, 0.4);
+        }
+
+        .video-info {
+            padding: 15px;
+        }
+
+        .video-title {
+            color: #fff;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .video-channel {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 12px;
+        }
+
+        .loading {
+            text-align: center;
+            color: #60a5fa;
+            padding: 20px;
+            font-size: 16px;
+        }
+
+        .error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 2px solid rgba(239, 68, 68, 0.4);
+            border-radius: 12px;
+            padding: 15px;
+            color: #fca5a5;
+            margin-top: 15px;
+        }
+
+        .api-key-input {
+            display: none;
+            margin-top: 10px;
+            padding: 10px;
+            background: rgba(30, 30, 60, 0.4);
+            border-radius: 8px;
+            border: 1px solid rgba(100, 150, 255, 0.3);
+        }
+
+        .api-key-input.show {
+            display: block;
+        }
+
+        .api-key-input input {
+            width: 100%;
+            margin-top: 5px;
+        }
+
+        .api-key-input label {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="stars" id="stars"></div>
+
+    <div class="container">
+        <h1>🌌 Cosmos Video Player</h1>
+        
+        <div class="search-container">
+            <div class="api-selector">
+                <button class="api-button active" data-api="youtube">YouTube</button>
+                <button class="api-button" data-api="invidious">Invidious (Alternative)</button>
+                <button class="api-button" data-api="piped">Piped (Alternative)</button>
+            </div>
+
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Search for videos..." />
+                <button id="searchBtn">Search</button>
+            </div>
+        </div>
+
+        <div class="video-player" id="videoPlayer">
+            <div class="placeholder">
+                <svg viewBox="0 0 24 24" fill="currentColor" style="color: rgba(255, 255, 255, 0.3)">
+                    <path d="M8 5v14l11-7z"/>
+                </svg>
+                <div class="placeholder-text">Search and select a video to play</div>
+            </div>
+        </div>
+
+        <div id="resultsContainer"></div>
+    </div>
+
+    <script>
+        // YouTube API Configuration - Replace with your actual API key
+        const YOUTUBE_API_KEY = 'AIzaSyDl-5RqqZtveL5xLg4jHfj7vCmt-acEn8U';
+
+        // Generate stars
+        function createStars() {
+            const starsContainer = document.getElementById('stars');
+            for (let i = 0; i < 100; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+                star.style.left = Math.random() * 100 + '%';
+                star.style.top = Math.random() * 100 + '%';
+                star.style.animationDelay = Math.random() * 3 + 's';
+                starsContainer.appendChild(star);
+            }
+        }
+        createStars();
+
+        // API Configuration
+        let currentAPI = 'youtube';
+        const INVIDIOUS_INSTANCES = [
+            'https://invidious.snopyta.org',
+            'https://yewtu.be',
+            'https://invidious.kavin.rocks'
+        ];
+        const PIPED_INSTANCES = [
+            'https://pipedapi.kavin.rocks',
+            'https://pipedapi-libre.kavin.rocks'
+        ];
+
+        // Elements
+        const searchInput = document.getElementById('searchInput');
+        const searchBtn = document.getElementById('searchBtn');
+        const videoPlayer = document.getElementById('videoPlayer');
+        const resultsContainer = document.getElementById('resultsContainer');
+        const apiButtons = document.querySelectorAll('.api-button');
+
+        // API Selection
+        apiButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                apiButtons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentAPI = btn.dataset.api;
+                resultsContainer.innerHTML = '';
+            });
+        });
+
+        // Search functionality
+        searchBtn.addEventListener('click', () => search());
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') search();
+        });
+
+        async function search() {
+            const query = searchInput.value.trim();
+            if (!query) return;
+
+            resultsContainer.innerHTML = '<div class="loading">Searching the cosmos...</div>';
+
+            try {
+                let results;
+                switch (currentAPI) {
+                    case 'youtube':
+                        results = await searchYouTube(query);
+                        break;
+                    case 'invidious':
+                        results = await searchInvidious(query);
+                        break;
+                    case 'piped':
+                        results = await searchPiped(query);
+                        break;
+                }
+                displayResults(results);
+            } catch (error) {
+                resultsContainer.innerHTML = `
+                    <div class="error">
+                        ❌ Error: ${error.message}
+                        <br><br>
+                        Try switching to an alternative API using the buttons above.
+                    </div>
+                `;
+            }
+        }
+
+        async function searchYouTube(query) {
+            if (!YOUTUBE_API_KEY || YOUTUBE_API_KEY === 'AIzaSyDl-5RqqZtveL5xLg4jHfj7vCmt-acEn8U') {
+                throw new Error('YouTube API key not configured. Please add your API key in the code or use an alternative API.');
+            }
+
+            const response = await fetch(
+                `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=video&maxResults=12&key=${YOUTUBE_API_KEY}`
+            );
+
+            if (!response.ok) {
+                if (response.status === 403) {
+                    throw new Error('YouTube API quota exceeded or invalid key. Try an alternative API.');
+                }
+                throw new Error('YouTube API request failed');
+            }
+
+            const data = await response.json();
+            return data.items.map(item => ({
+                id: item.id.videoId,
+                title: item.snippet.title,
+                channel: item.snippet.channelTitle,
+                thumbnail: item.snippet.thumbnails.medium.url,
+                type: 'youtube'
+            }));
+        }
+
+        async function searchInvidious(query) {
+            for (const instance of INVIDIOUS_INSTANCES) {
+                try {
+                    const response = await fetch(
+                        `${instance}/api/v1/search?q=${encodeURIComponent(query)}&type=video`
+                    );
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        return data.slice(0, 12).map(item => ({
+                            id: item.videoId,
+                            title: item.title,
+                            channel: item.author,
+                            thumbnail: item.videoThumbnails[0]?.url || '',
+                            type: 'invidious',
+                            instance: instance
+                        }));
+                    }
+                } catch (e) {
+                    continue;
+                }
+            }
+            throw new Error('All Invidious instances unavailable');
+        }
+
+        async function searchPiped(query) {
+            for (const instance of PIPED_INSTANCES) {
+                try {
+                    const response = await fetch(
+                        `${instance}/search?q=${encodeURIComponent(query)}&filter=videos`
+                    );
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        return data.items.slice(0, 12).map(item => ({
+                            id: item.url.replace('/watch?v=', ''),
+                            title: item.title,
+                            channel: item.uploaderName,
+                            thumbnail: item.thumbnail,
+                            type: 'piped',
+                            instance: instance
+                        }));
+                    }
+                } catch (e) {
+                    continue;
+                }
+            }
+            throw new Error('All Piped instances unavailable');
+        }
+
+        function displayResults(results) {
+            if (!results || results.length === 0) {
+                resultsContainer.innerHTML = '<div class="loading">No results found</div>';
+                return;
+            }
+
+            resultsContainer.innerHTML = '<div class="results-container">' +
+                results.map(video => `
+                    <div class="video-card" onclick='playVideo(${JSON.stringify(video)})'>
+                        <img src="${video.thumbnail}" alt="${video.title}" class="video-thumbnail" />
+                        <div class="video-info">
+                            <div class="video-title">${video.title}</div>
+                            <div class="video-channel">${video.channel}</div>
+                        </div>
+                    </div>
+                `).join('') +
+            '</div>';
+        }
+
+        function playVideo(video) {
+            let embedUrl;
+            
+            switch (video.type) {
+                case 'youtube':
+                    embedUrl = `https://www.youtube.com/embed/${video.id}`;
+                    break;
+                case 'invidious':
+                    embedUrl = `${video.instance}/embed/${video.id}`;
+                    break;
+                case 'piped':
+                    embedUrl = `https://piped.video/embed/${video.id}`;
+                    break;
+            }
+
+            videoPlayer.innerHTML = `
+                <iframe 
+                    src="${embedUrl}" 
+                    frameborder="0" 
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                    allowfullscreen>
+                </iframe>
+            `;
+
+            videoPlayer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    </script>
+</body>
+</html>
